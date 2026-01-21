@@ -1,0 +1,34 @@
+# Azure
+*.json
+!azure.yaml
+!package.json
+!tsconfig.json
+!package-lock.json
+
+# PowerShell
+*.ps1.bak
+
+# Kubernetes
+.kube/
+*.kubeconfig
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Policy parameters
+policy-params.json
+
+# SSH Keys
+*.pub
+id_rsa*
+
+# OS
+.DS_Store
+Thumbs.db
+.git-old

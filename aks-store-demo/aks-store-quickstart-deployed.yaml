@@ -1,0 +1,199 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+      - name: order-service
+        image: acrdemogc91.azurecr.io/aks-store-demo/order-service:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: ORDER_QUEUE_HOSTNAME
+          value: "sbstoredemogc91.servicebus.windows.net"
+        - name: ORDER_QUEUE_PORT
+          value: "5671"
+        - name: ORDER_QUEUE_TRANSPORT
+          value: "tls"
+        - name: ORDER_QUEUE_USERNAME
+          value: "sender"
+        - name: ORDER_QUEUE_PASSWORD
+          value: "XXXXX-REPLACE-WITH-SERVICEBUS-KEY-XXXXX"
+        - name: ORDER_QUEUE_NAME
+          value: "orders"
+        - name: FASTIFY_ADDRESS
+          value: "0.0.0.0"
+        resources:
+          requests:
+            cpu: 1m
+            memory: 50Mi
+          limits:
+            cpu: 75m
+            memory: 128Mi
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          failureThreshold: 5
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          failureThreshold: 3
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          failureThreshold: 5
+          initialDelaySeconds: 3
+          periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: order-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+        - name: product-service
+          image: acrdemogc91.azurecr.io/aks-store-demo/product-service:latest
+          ports:
+            - containerPort: 3002
+          env:
+            - name: AI_SERVICE_URL
+              value: "http://ai-service:5001/"
+          resources:
+            requests:
+              cpu: 1m
+              memory: 1Mi
+            limits:
+              cpu: 2m
+              memory: 20Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            failureThreshold: 3
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            failureThreshold: 5
+            initialDelaySeconds: 3
+            periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3002
+      targetPort: 3002
+  selector:
+    app: product-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: store-front
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: store-front
+  template:
+    metadata:
+      labels:
+        app: store-front
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+        - name: store-front
+          image: acrdemogc91.azurecr.io/aks-store-demo/store-front:latest
+          ports:
+            - containerPort: 8080
+              name: store-front
+          resources:
+            requests:
+              cpu: 1m
+              memory: 200Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            failureThreshold: 3
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            failureThreshold: 5
+            initialDelaySeconds: 3
+            periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: store-front
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+  selector:
+    app: store-front
+  type: LoadBalancer
